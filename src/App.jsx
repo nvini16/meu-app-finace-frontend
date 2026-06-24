@@ -26,6 +26,26 @@ export default function App() {
     await supabase.auth.signOut();
   };
 
+ const handleDeleteAccount = async () => {
+    const confirmar = window.confirm(
+      "ATENÇÃO: Tem certeza que deseja deletar sua conta?\n\nTodos os seus lançamentos financeiros serão apagados permanentemente e esta ação não poderá ser desfeita."
+    );
+
+    if (!confirmar) return;
+
+    try {
+      // Chama a função SQL que criamos no Supabase
+      const { error } = await supabase.rpc('deletar_propria_conta');
+      
+      if (error) throw error;
+
+      alert("Sua conta e todos os seus dados foram apagados com sucesso.");
+      // O Supabase vai fechar a sessão sozinho e te mandar de volta para a tela de Login
+    } catch (error) {
+      alert(`Erro ao deletar conta: ${error.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-emerald-400 font-medium">
@@ -34,26 +54,33 @@ export default function App() {
     );
   }
 
-  // Se não estiver logado, exibe a tela de Login
   if (!session) {
     return <Login />;
   }
 
-  // Se estiver logado, exibe o app principal (Passando a sessão ou usuário se precisar)
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Barra Superior / Header simples para Logout */}
+      {/* Header atualizado com os dois botões */}
       <header className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center border-b border-slate-900">
         <h1 className="text-xl font-bold text-emerald-400">Alvocapital</h1>
-        <button
-          onClick={handleLogout}
-          className="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-rose-400 px-3 py-1.5 rounded-lg transition-colors"
-        >
-          Sair da Conta
-        </button>
+        
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleLogout}
+            className="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Sair da Conta
+          </button>
+          
+          <button
+            onClick={handleDeleteAccount}
+            className="text-xs bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900/50 text-rose-400 hover:text-rose-200 px-3 py-1.5 rounded-lg transition-colors font-medium"
+          >
+            Deletar Conta
+          </button>
+        </div>
       </header>
 
-      {/* Seu componente principal com o gráfico e tabela */}
       <main className="py-6">
         <Lancamentos session={session} />
       </main>
