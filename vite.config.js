@@ -6,36 +6,36 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: [],
-      manifest: {
-        name: 'Alvocapital',
-        short_name: 'Finanças',
-        description: 'Meu aplicativo de controle financeiro pessoal',
-        theme_color: '#10b981', // Cor esmeralda na barra do navegador
-        background_color: '#0f172a', // Cor escura na tela de abertura (Splash Screen)
-        display: 'standalone', // Abre em tela cheia idêntico a um app nativo
-        orientation: 'portrait',
-        icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
-          }
-        ]
-      }
-    })
+    // VitePWA({
+    //   registerType: 'autoUpdate',
+    //   includeAssets: [],
+    //   manifest: {
+    //     name: 'Alvocapital',
+    //     short_name: 'Finanças',
+    //     description: 'Meu aplicativo de controle financeiro pessoal',
+    //     theme_color: '#10b981', // Cor esmeralda na barra do navegador
+    //     background_color: '#0f172a', // Cor escura na tela de abertura (Splash Screen)
+    //     display: 'standalone', // Abre em tela cheia idêntico a um app nativo
+    //     orientation: 'portrait',
+    //     icons: [
+    //       {
+    //         src: 'pwa-192x192.png',
+    //         sizes: '192x192',
+    //         type: 'image/png'
+    //       },
+    //       {
+    //         src: 'pwa-512x512.png',
+    //         sizes: '512x512',
+    //         type: 'image/png'
+    //       },
+    //       {
+    //         src: 'pwa-512x512.png',
+    //         sizes: '512x512',
+    //         type: 'image/png',
+    //         purpose: 'any maskable'
+    //       }
+    //     ]
+    //   }
+    // })
   ]
 })
