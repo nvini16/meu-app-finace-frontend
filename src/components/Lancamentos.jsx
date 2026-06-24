@@ -2,7 +2,7 @@ import { supabase } from '../supabaseClient';
 import { useState, useEffect, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
-export default function Lancamentos() {
+export default function Lancamentos({ session }) {
   const [transacoes, setTransacoes] = useState([]);
 
   // Estado para os campos do formulário
@@ -17,13 +17,16 @@ export default function Lancamentos() {
 
   // 1. FUNÇÃO MEMOIZADA COM USECALLBACK (Remove o aviso do useEffect de vez)
   const buscarTransacoes = useCallback(async () => {
+    if (!session?.user?.id) return;
+
     const { data, error } = await supabase
       .from('transacoes')
       .select('*')
+      .eq('user_id', session.user.id) // FILTRA POR USUÁRIO
       .order('data', { ascending: false });
 
     if (error) {
-      console.error('Erro ao buscar dados:', error.message);
+      console.error('Erro ao buscar usuário:', error.message);
     } else {
       const dadosFormatados = data.map(t => ({
         id: t.id,
@@ -77,6 +80,7 @@ export default function Lancamentos() {
     if (!form.descricao || !form.valor) return alert('Por favor, preencha os dados!');
 
     const novaLinha = {
+      user_id: session.user.id,
       data: form.data,
       descricao: form.descricao,
       valor: parseFloat(form.valor),
