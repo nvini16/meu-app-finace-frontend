@@ -34,13 +34,15 @@ export default function App() {
     if (!confirmar) return;
 
     try {
-      // Chama a função SQL que criamos no Supabase
+      // 1. Deleta o usuário lá no banco de dados do Supabase
       const { error } = await supabase.rpc('deletar_propria_conta');
-      
       if (error) throw error;
 
+      // 2. O AJUSTE: Força a limpeza do token local no navegador
+      await supabase.auth.signOut();
+
       alert("Sua conta e todos os seus dados foram apagados com sucesso.");
-      // O Supabase vai fechar a sessão sozinho e te mandar de volta para a tela de Login
+      
     } catch (error) {
       alert(`Erro ao deletar conta: ${error.message}`);
     }
@@ -49,7 +51,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-emerald-400 font-medium">
-        Carregando Alvocapital...
+        Carregando Seu Alvocapital...
       </div>
     );
   }
