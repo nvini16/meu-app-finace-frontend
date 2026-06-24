@@ -249,7 +249,7 @@ export default function Lancamentos() {
                   name="descricao"
                   value={form.descricao}
                   onChange={handleChange}
-                  placeholder="Ex: Mercado Central"
+                  placeholder="Ex: Mercado / Salário..."
                   className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg p-2.5 text-sm text-slate-100 outline-none transition-all"
                 />
               </div>
@@ -262,7 +262,7 @@ export default function Lancamentos() {
                   step="0.01"
                   value={form.valor}
                   onChange={handleChange}
-                  placeholder="0,00"
+                  placeholder="1500.00 / Mil e quinhentos reais"
                   className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg p-2.5 text-sm text-slate-100 outline-none transition-all"
                 />
               </div>
