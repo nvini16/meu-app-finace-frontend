@@ -10,7 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: [],
       manifest: {
-        name: 'Sistema de Controle Financeiro',
+        name: 'Alvocapital',
         short_name: 'Finanças',
         description: 'Meu aplicativo de controle financeiro pessoal',
         theme_color: '#10b981', // Cor esmeralda na barra do navegador
