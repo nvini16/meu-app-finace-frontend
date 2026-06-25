@@ -1,11 +1,10 @@
 import { supabase } from '../supabaseClient';
 import { useState, useEffect, useCallback } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import Dashboard from './Dashboard'; // 🌟 Importa o novo painel completo
 
 export default function Lancamentos({ session }) {
   const [transacoes, setTransacoes] = useState([]);
 
-  // Estado para os campos do formulário
   const [form, setForm] = useState({
     data: new Date().toISOString().split('T')[0],
     descricao: '',
@@ -15,14 +14,13 @@ export default function Lancamentos({ session }) {
     formaPagamento: 'Cartão de Crédito'
   });
 
-  // 1. FUNÇÃO MEMOIZADA COM USECALLBACK (Remove o aviso do useEffect de vez)
   const buscarTransacoes = useCallback(async () => {
     if (!session?.user?.id) return;
 
     const { data, error } = await supabase
       .from('transacoes')
       .select('*')
-      .eq('user_id', session.user.id) // FILTRA POR USUÁRIO
+      .eq('user_id', session.user.id)
       .order('data', { ascending: false });
 
     if (error) {
@@ -35,46 +33,24 @@ export default function Lancamentos({ session }) {
         valor: t.valor,
         categoria: t.categoria,
         tipo: t.tipo,
-        formaPagamento: t.forma_pagamento
+        formaPagamento: t.forma_pack || t.forma_pagamento
       }));
       setTransacoes(dadosFormatados);
     }
-  }, []);
+  }, [session]); // ALTERADO AQUI: De session?.user?.id para session
 
   // 2. CARREGAR DADOS AO MONTAR A TELA
   useEffect(() => {
-    const executarBusca = async () => {
-      await buscarTransacoes();
-    };
-
-    executarBusca();
+    // Envelopado em uma Promise para garantir execução assíncrona fora do fluxo principal
+    Promise.resolve().then(() => {
+      buscarTransacoes();
+    });
   }, [buscarTransacoes]);
 
-  // 3. PREPARAR DADOS PARA O GRÁFICO (Filtra por 'Gasto')
-  const prepararDadosGrafico = () => {
-    const despesas = transacoes.filter(t => t.tipo === 'Gasto');
-
-    const agrupado = despesas.reduce((acumulador, t) => {
-      const cat = t.categoria || 'Outros';
-      acumulador[cat] = (acumulador[cat] || 0) + Number(t.valor);
-      return acumulador;
-    }, {});
-
-    return Object.keys(agrupado).map(chave => ({
-      name: chave,
-      value: agrupado[chave]
-    }));
-  };
-
-  // Cores modernas que contrastam muito bem no fundo escuro
-  const CORES = ['#f43f5e', '#3b82f6', '#eab308', '#a855f7', '#10b981', '#64748b'];
-
-  // Captura as alterações dos inputs
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // 4. ENVIO DO FORMULÁRIO
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.descricao || !form.valor) return alert('Por favor, preencha os dados!');
@@ -113,7 +89,6 @@ export default function Lancamentos({ session }) {
         buscarTransacoes();
       }
 
-      // Limpa o formulário
       setForm({
         data: new Date().toISOString().split('T')[0],
         descricao: '',
@@ -125,7 +100,6 @@ export default function Lancamentos({ session }) {
     }
   };
 
-  // 5. EXCLUIR REGISTRO
   const handleExcluir = async (id) => {
     if (confirm('Tem certeza que deseja apagar este lançamento?')) {
       const { error } = await supabase
@@ -141,17 +115,6 @@ export default function Lancamentos({ session }) {
       }
     }
   };
-
-  // Cálculos em tempo real
-  const totalReceitas = transacoes
-    .filter(t => t.tipo === 'Receita')
-    .reduce((acc, curr) => acc + curr.valor, 0);
-
-  const totalGastos = transacoes
-    .filter(t => t.tipo === 'Gasto')
-    .reduce((acc, curr) => acc + curr.valor, 0);
-
-  const saldoTotal = totalReceitas - totalGastos;
 
   const formatarMoeda = (valor) => {
     return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -169,54 +132,8 @@ export default function Lancamentos({ session }) {
           </div>
         </header>
 
-        {/* CARDS INDICADORES */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl">
-            <span className="text-xs font-medium text-slate-400 block mb-1">Total Receitas</span>
-            <span className="text-2xl font-bold text-emerald-400">R$ {formatarMoeda(totalReceitas)}</span>
-          </div>
-          <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl">
-            <span className="text-xs font-medium text-slate-400 block mb-1">Total Gastos</span>
-            <span className="text-2xl font-bold text-rose-400">R$ {formatarMoeda(totalGastos)}</span>
-          </div>
-          <div className="bg-slate-900/50 border border-[#10b981]/20 p-4 rounded-xl shadow-lg">
-            <span className="text-xs font-medium text-slate-400 block mb-1">Saldo Líquido</span>
-            <span className={`text-2xl font-bold ${saldoTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              R$ {formatarMoeda(saldoTotal)}
-            </span>
-          </div>
-        </div>
-
-        {/* GRÁFICO DE GASTOS POR CATEGORIA (Posicionado entre os Cards e o Fluxo) */}
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-slate-800 pb-2">Gastos por Categoria</h2>
-          
-          <div style={{ width: '100%', height: 260 }}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={prepararDadosGrafico()} 
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60} 
-                  outerRadius={85}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {prepararDadosGrafico().map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CORES[index % CORES.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
-                  itemStyle={{ color: '#f1f5f9' }}
-                  formatter={(value) => `R$ ${Number(value).toFixed(2)}`} 
-                />
-                <Legend formatter={(value) => <span className="text-slate-300 text-sm ml-1">{value}</span>} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        {/* 🌟 PAINEL DE CARDS E GRÁFICOS DUPLOS (Injetado com as transações do estado local) */}
+        <Dashboard transacoes={transacoes} />
 
         {/* GRID DO FORMULÁRIO E DA TABELA */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -266,7 +183,7 @@ export default function Lancamentos({ session }) {
                   step="0.01"
                   value={form.valor}
                   onChange={handleChange}
-                  placeholder="1500.00 / Mil e quinhentos reais"
+                  placeholder="1500.00"
                   className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg p-2.5 text-sm text-slate-100 outline-none transition-all"
                 />
               </div>
@@ -364,7 +281,6 @@ export default function Lancamentos({ session }) {
                           type="button"
                           onClick={() => handleExcluir(t.id)}
                           className="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors cursor-pointer text-xs"
-                          title="Excluir Lançamento"
                         >
                           Excluir
                         </button>
