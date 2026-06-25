@@ -256,9 +256,13 @@ export default function Lancamentos({ session }) {
         
         {/* CABEÇALHO */}
         <header className="flex justify-between items-center border-b border-slate-800 pb-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-emerald-400">Alvocapital</h1>
-            <p className="text-xs text-slate-400">Controle Financeiro Pessoal</p>
+          <div className="flex items-center gap-3">
+            {/* Chamada direta do arquivo PNG na pasta public */}
+            <img src="/publicpwa-192x192.png" alt="Alvocapital Logo" className="w-9 h-9 rounded-xl object-contain" />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-emerald-400">Alvocapital</h1>
+              <p className="text-xs text-slate-400">Controle Financeiro Pessoal</p>
+            </div>
           </div>
         </header>
 
