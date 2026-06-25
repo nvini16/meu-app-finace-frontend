@@ -1,17 +1,22 @@
 import { supabase } from '../supabaseClient';
 import { useState, useEffect, useCallback } from 'react';
-import Dashboard from './Dashboard'; // Importa o novo painel completo
+import Dashboard from './Dashboard';
 
-// IMPORTAÇÕES AJUSTADAS E SEGURAS PARA EVITAR CRASH NO VITE
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function Lancamentos({ session }) {
+  const hoje = new Date();
+  
+  //  ESTADOS PARA O FILTRO DE MÊS E ANO (COMPETÊNCIA)
+  const [mesSelecionado, setMesSelecionado] = useState(String(hoje.getMonth() + 1).padStart(2, '0'));
+  const [anoSelecionado, setAnoSelecionado] = useState(String(hoje.getFullYear()));
+
   const [transacoes, setTransacoes] = useState([]);
-  const [editandoId, setEditandoId] = useState(null); // ESTADO PARA CONTROLAR SE ESTAMOS EDITANDO
+  const [editandoId, setEditandoId] = useState(null); // Estado para controlar a edição
 
   const [form, setForm] = useState({
-    data: new Date().toISOString().split('T')[0],
+    data: hoje.toISOString().split('T')[0],
     descricao: '',
     valor: '',
     categoria: 'Alimentação',
@@ -19,17 +24,25 @@ export default function Lancamentos({ session }) {
     formaPagamento: 'Cartão de Crédito'
   });
 
+  //  BUSCA FILTRADA NO SUPABASE POR MÊS/ANO
   const buscarTransacoes = useCallback(async () => {
     if (!session?.user?.id) return;
+
+    // Calcula o intervalo perfeito de dias do mês selecionado
+    const primeiroDia = `${anoSelecionado}-${mesSelecionado}-01`;
+    const ultimoDiaNum = new Date(parseInt(anoSelecionado), parseInt(mesSelecionado), 0).getDate();
+    const ultimoDia = `${anoSelecionado}-${mesSelecionado}-${String(ultimoDiaNum).padStart(2, '0')}`;
 
     const { data, error } = await supabase
       .from('transacoes')
       .select('*')
       .eq('user_id', session.user.id)
+      .gte('data', primeiroDia)
+      .lte('data', ultimoDia)
       .order('data', { ascending: false });
 
     if (error) {
-      console.error('Erro ao buscar usuário:', error.message);
+      console.error('Erro ao buscar transações:', error.message);
     } else {
       const dadosFormatados = data.map(t => ({
         id: t.id,
@@ -42,9 +55,9 @@ export default function Lancamentos({ session }) {
       }));
       setTransacoes(dadosFormatados);
     }
-  }, [session]);
+  }, [session, mesSelecionado, anoSelecionado, setTransacoes]);
 
-  // 2. CARREGAR DADOS AO MONTAR A TELA
+  // RECARREGA USANDO MICROTASK PARA EVITAR CASCADING RENDERS NO COMPILER
   useEffect(() => {
     Promise.resolve().then(() => {
       buscarTransacoes();
@@ -55,7 +68,7 @@ export default function Lancamentos({ session }) {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  //  FUNÇÃO QUE PREPARA O FORMULÁRIO PARA EDIÇÃO
+  // FUNÇÕES DE CONTROLE DE EDIÇÃO
   const handleIniciarEdicao = (t) => {
     setEditandoId(t.id);
     setForm({
@@ -68,7 +81,6 @@ export default function Lancamentos({ session }) {
     });
   };
 
-  // FUNÇÃO PARA CANCELAR A EDIÇÃO E LIMPAR O FORMULÁRIO
   const handleCancelarEdicao = () => {
     setEditandoId(null);
     setForm({
@@ -96,7 +108,6 @@ export default function Lancamentos({ session }) {
     };
 
     if (editandoId) {
-      // LÓGICA DE ATUALIZAÇÃO (UPDATE)
       const { data, error } = await supabase
         .from('transacoes')
         .update(dadosLinha)
@@ -117,26 +128,22 @@ export default function Lancamentos({ session }) {
             tipo: data[0].tipo,
             formaPagamento: data[0].forma_pagamento
           };
-          // Atualiza o estado local substituindo apenas o item editado
-          setTransacoes(transacoes.map(t => t.id === editandoId ? transacaoAtualizada : t));
+          
+          const [anoLado, mesLado] = data[0].data.split('-');
+          if (anoLado === anoSelecionado && mesLado === mesSelecionado) {
+            setTransacoes(transacoes.map(t => t.id === editandoId ? transacaoAtualizada : t));
+          } else {
+            setTransacoes(transacoes.filter(t => t.id !== editandoId));
+          }
         } else {
           buscarTransacoes();
         }
         
-        setEditandoId(null); // Sai do modo de edição
-        setForm({
-          data: new Date().toISOString().split('T')[0],
-          descricao: '',
-          valor: '',
-          categoria: 'Alimentação',
-          tipo: 'Gasto',
-          formaPagamento: 'Cartão de Crédito'
-        });
+        handleCancelarEdicao();
         alert('Lançamento atualizado com sucesso!');
       }
 
     } else {
-      // LÓGICA DE INSERÇÃO EXISTENTE (INSERT)
       const { data, error } = await supabase
         .from('transacoes')
         .insert([dadosLinha])
@@ -156,7 +163,11 @@ export default function Lancamentos({ session }) {
             tipo: data[0].tipo,
             formaPagamento: data[0].forma_pagamento
           };
-          setTransacoes([transacaoCriada, ...transacoes]);
+          
+          const [anoLado, mesLado] = data[0].data.split('-');
+          if (anoLado === anoSelecionado && mesLado === mesSelecionado) {
+            setTransacoes([transacaoCriada, ...transacoes]);
+          }
         } else {
           buscarTransacoes();
         }
@@ -184,7 +195,6 @@ export default function Lancamentos({ session }) {
         console.error('Erro ao deletar:', error.message);
         alert('Não foi possível excluir o registro.');
       } else {
-        // Se deletar o item que estava sendo editado, limpa o formulário
         if (editandoId === id) setEditandoId(null);
         setTransacoes(transacoes.filter(t => t.id !== id));
       }
@@ -195,28 +205,25 @@ export default function Lancamentos({ session }) {
     return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  //  FUNÇÃO DE EXPORTAÇÃO COMPLETA E PROTEGIDA CONTRA ERROS SILENCIOSOS
   const exportarParaPDF = () => {
     if (transacoes.length === 0) {
-      return alert('Não há lançamentos para exportar!');
+      return alert('Não há lançamentos neste período para exportar!');
     }
 
     try {
       const doc = new jsPDF();
 
-      // 1. Cabeçalho do PDF
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(22);
-      doc.setTextColor(16, 185, 129); // Emerald do Alvocapital
+      doc.setTextColor(16, 185, 129);
       doc.text('Alvocapital', 14, 20);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(100, 116, 139);
-      doc.text('Relatório de Controle Financeiro Pessoal', 14, 26);
+      doc.text(`Relatório de Controle Financeiro — Período: ${mesSelecionado}/${anoSelecionado}`, 14, 26);
       doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 31);
 
-      // 2. Resumos Financeiros para o Topo do PDF
       const totalReceitas = transacoes.filter(t => t.tipo === 'Receita').reduce((acc, curr) => acc + curr.valor, 0);
       const totalGastos = transacoes.filter(t => t.tipo === 'Gasto').reduce((acc, curr) => acc + curr.valor, 0);
       const saldoTotal = totalReceitas - totalGastos;
@@ -234,7 +241,6 @@ export default function Lancamentos({ session }) {
       if (saldoTotal >= 0) doc.setTextColor(16, 185, 129); else doc.setTextColor(244, 63, 94);
       doc.text(`Saldo Líquido: R$ ${formatarMoeda(saldoTotal)}`, 18, 56);
 
-      // 3. Mapeamento dos Dados da Tabela com travas de segurança
       const colunasTabela = ['Data', 'Descrição', 'Categoria', 'Forma Pagamento', 'Tipo', 'Valor'];
       const linhasTabela = transacoes.map(t => [
         t.data ? t.data.split('-').reverse().join('/') : 'N/A',
@@ -245,7 +251,6 @@ export default function Lancamentos({ session }) {
         `${t.tipo === 'Receita' ? '+' : '-'} R$ ${formatarMoeda(t.valor || 0)}`
       ]);
 
-      // Chamada direta do autoTable (Evita o erro clássico 'doc.autoTable is not a function')
       autoTable(doc, {
         head: [colunasTabela],
         body: linhasTabela,
@@ -258,20 +263,16 @@ export default function Lancamentos({ session }) {
         }
       });
 
-      // 4. Salvar arquivo
-      const dataFormatada = new Date().toISOString().split('T')[0];
-      doc.save(`relatorio_alvocapital_${dataFormatada}.pdf`);
-
+      doc.save(`relatorio_alvocapital_${mesSelecionado}_${anoSelecionado}.pdf`);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
-      alert(`Ocorreu um erro técnico ao gerar o PDF: ${error.message}`);
+      alert(`Erro ao gerar o PDF: ${error.message}`);
     }
   };
 
-  // MECANISMO DE BACKUP: GERAÇÃO E DOWNLOAD DO ARQUIVO JSON
-  const exportarParaJSON = useCallback((silencioso = false) => {
+  const exportarParaJSON = useCallback(() => {
     if (transacoes.length === 0) {
-      if (!silencioso) alert('Não há dados de lançamentos para criar um backup!');
+      alert('Não há dados de lançamentos para criar um backup!');
       return;
     }
     try {
@@ -281,75 +282,79 @@ export default function Lancamentos({ session }) {
       
       const link = document.createElement('a');
       link.href = url;
-      const hojeStr = new Date().toISOString().split('T')[0];
-      link.download = `alvocapital_backup_${hojeStr}.json`;
+      link.download = `alvocapital_backup_${mesSelecionado}_${anoSelecionado}.json`;
       link.click();
       URL.revokeObjectURL(url);
 
-      localStorage.setItem('alvocapital_ultimo_backup_data', hojeStr);
-      if (!silencioso) alert('Backup de segurança (.json) gerado e baixado com sucesso!');
+      alert('Backup do período gerado com sucesso!');
     } catch (error) {
-      console.error("Erro ao exportar backup em JSON:", error);
-      if (!silencioso) alert("Erro técnico ao gerar o arquivo de backup.");
+      console.error("Erro ao exportar backup:", error);
     }
-  }, [transacoes]);
-
-  // CAMADA 1: ESPELHAMENTO AUTOMÁTICO EM TEMPO REAL NO LOCALSTORAGE
-  useEffect(() => {
-    if (transacoes.length > 0 && session?.user?.id) {
-      localStorage.setItem(`alvocapital_backup_local_${session.user.id}`, JSON.stringify(transacoes));
-    }
-  }, [transacoes, session]);
-
-  // CAMADA 2: ROTINA DE BACKUP AUTOMÁTICO EM ARQUIVO A CADA 7 DIAS
-  useEffect(() => {
-    if (transacoes.length === 0) return;
-
-    const ultimaDataBackup = localStorage.getItem('alvocapital_ultimo_backup_data');
-    const hoje = new Date();
-
-    if (!ultimaDataBackup) {
-      exportarParaJSON(true);
-    } else {
-      const dataUltimo = new Date(ultimaDataBackup);
-      const diferencaTempo = hoje.getTime() - dataUltimo.getTime();
-      const diferencaDias = Math.floor(diferencaTempo / (1000 * 60 * 60 * 24));
-
-      if (diferencaDias >= 7) {
-        exportarParaJSON(true);
-      }
-    }
-  }, [transacoes, exportarParaJSON]);
+  }, [transacoes, mesSelecionado, anoSelecionado]);
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-100 p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         
-        {/* CABEÇALHO */}
+        {/* CABEÇALHO COM LOGO CORRIGIDA */}
         <header className="flex justify-between items-center border-b border-slate-800 pb-1 pt-0">
-          
-          {/* LADO ESQUERDO: A Logo */}
           <img 
             src="/publicpwa-512x512.png" 
             alt="Alvocapital" 
             className="w-48 h-48 object-contain opacity-50 drop-shadow-[0_0_8px_rgba(52,211,153,0.2)] -my-16 -ml-4" 
           />
-          
-          {/* LADO DIREITO: O Nome e Subtítulo */}
           <div className="text-right py-2">
             <h1 className="text-2xl font-bold tracking-tight text-emerald-400 leading-tight">Alvocapital</h1>
             <p className="text-xs text-slate-500 leading-none mt-1">Controle Financeiro Pessoal</p>
           </div>
-
         </header>
 
-        {/* PAINEL DE CARDS E GRÁFICOS DUPLOS */}
+        {/* BARRA DE FILTRO DE COMPETÊNCIA (MÊS/ANO) */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-lg">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-200">Período de Visualização</h3>
+            <p className="text-xs text-slate-400">Dados filtrados do banco em tempo real</p>
+          </div>
+          
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <select
+              value={mesSelecionado}
+              onChange={(e) => setMesSelecionado(e.target.value)}
+              className="bg-slate-950 border border-slate-800 focus:border-emerald-500 text-slate-200 text-sm font-medium rounded-xl p-2.5 outline-none cursor-pointer transition-all flex-1 sm:flex-none"
+            >
+              <option value="01">Janeiro</option>
+              <option value="02">Fevereiro</option>
+              <option value="03">Março</option>
+              <option value="04">Abril</option>
+              <option value="05">Maio</option>
+              <option value="06">Junho</option>
+              <option value="07">Julho</option>
+              <option value="08">Agosto</option>
+              <option value="09">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+
+            <select
+              value={anoSelecionado}
+              onChange={(e) => setAnoSelecionado(e.target.value)}
+              className="bg-slate-950 border border-slate-800 focus:border-emerald-500 text-slate-200 text-sm font-medium rounded-xl p-2.5 outline-none cursor-pointer transition-all"
+            >
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+            </select>
+          </div>
+        </div>
+
+        {/* PAINEL DE CARDS E GRÁFICOS */}
         <Dashboard transacoes={transacoes} />
 
         {/* GRID DO FORMULÁRIO E DA TABELA */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           
-          {/* FORMULÁRIO COM CONTROLE DINÂMICO DE EDIÇÃO */}
+          {/* FORMULÁRIO DINÂMICO (NOVO / EDITAR) */}
           <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
             <h2 className="text-lg font-semibold text-slate-200 mb-2 border-b border-slate-800 pb-2">
               {editandoId ? 'Editar Lançamento' : 'Novo Lançamento'}
@@ -446,7 +451,6 @@ export default function Lancamentos({ session }) {
               </div>
             </div>
 
-            {/* BOTÕES DINÂMICOS DO FORMULÁRIO */}
             <div className="space-y-2 pt-2">
               <button
                 type="submit"
@@ -467,33 +471,32 @@ export default function Lancamentos({ session }) {
             </div>
           </form>
 
-          {/* TABELA HISTÓRICO COM OS BOTÕES DE AÇÃO ADICIONADOS */}
+          {/* TABELA HISTÓRICO */}
           <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-slate-800 flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <h2 className="text-lg font-semibold text-slate-200">Histórico de Fluxo</h2>
+                <h2 className="text-lg font-semibold text-slate-200">Fluxo do Período</h2>
                 <span className="text-xs bg-slate-800 px-2.5 py-1 rounded-full text-slate-400 font-medium">
-                  {transacoes.length} registros
+                  {transacoes.length} no mês
                 </span>
               </div>
               
-              {/* ÁREA DE EXPORTAÇÃO E BACKUP */}
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={exportarParaPDF}
                   className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded-lg transition-all shadow-md cursor-pointer flex items-center gap-1.5"
                 >
-                  <span>⥥</span> Exportar PDF
+                  <span>⥥</span> Exportar Mês
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => exportarParaJSON(false)}
+                  onClick={exportarParaJSON}
                   className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-3 py-1.5 rounded-lg transition-all border border-slate-700/80 cursor-pointer flex items-center gap-1.5"
-                  title="Gerar cópia de segurança em JSON manualmente"
+                  title="Salvar backup em formato JSON"
                 >
-                  <span>⥣</span> Criar Backup
+                  <span>⥣</span> Cópia JSON
                 </button>
               </div>
             </div>
@@ -526,7 +529,6 @@ export default function Lancamentos({ session }) {
                       </td>
                       <td className="p-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-3">
-                          {/* 🌟 BOTÃO EDITAR ADICIONADO */}
                           <button
                             type="button"
                             onClick={() => handleIniciarEdicao(t)}
@@ -549,7 +551,7 @@ export default function Lancamentos({ session }) {
                   {transacoes.length === 0 && (
                     <tr>
                       <td colSpan="6" className="p-8 text-center text-slate-500 text-sm">
-                        Nenhum lançamento efetuado ainda.
+                        Nenhum lançamento encontrado para o período selecionado.
                       </td>
                     </tr>
                   )}
