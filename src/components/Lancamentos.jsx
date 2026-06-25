@@ -255,18 +255,21 @@ export default function Lancamentos({ session }) {
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* CABEÇALHO */}
-        <header className="flex justify-between items-center border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-4"> {/* Aumentamos o espaçamento para a logo respirar */}
-            <img 
-              src="/icons.svg" // Substitua por /publicpwa-192x192.png se estiver usando a versão em PNG
-              alt="Alvocapital Logo" 
-              className="w-13 h-13 object-contain drop-shadow-[0_0_8px_rgba(52,211,153,0.2)]" 
-            />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-emerald-400">Alvocapital</h1>
-              <p className="text-xs text-slate-400">Controle Financeiro Pessoal</p>
-            </div>
+        <header className="flex justify-between items-center border-b border-slate-800 pb-1 pt-0">
+          
+          {/* LADO ESQUERDO: A Logo (Com margem negativa para não esticar o header) */}
+          <img 
+            src="/publicpwa-512x512.png" 
+            alt="Alvocapital" 
+            className="w-48 h-48 object-contain opacity-50 drop-shadow-[0_0_8px_rgba(52,211,153,0.2)] -my-16 -ml-4" 
+          />
+          
+          {/* LADO DIREITO: O Nome e Subtítulo */}
+          <div className="text-right py-2">
+            <h1 className="text-2xl font-bold tracking-tight text-emerald-400 leading-tight">Alvocapital</h1>
+            <p className="text-xs text-slate-500 leading-none mt-1">Controle Financeiro Pessoal</p>
           </div>
+
         </header>
 
         {/* PAINEL DE CARDS E GRÁFICOS DUPLOS */}

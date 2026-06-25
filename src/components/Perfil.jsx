@@ -89,7 +89,7 @@ export default function Perfil({ session }) {
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-rose-950/10 border border-rose-950/30 rounded-xl">
           <div>
-            <h3 className="text-sm font-medium text-rose-400">Zona de Perigo</h3>
+            <h3 className="text-sm font-medium text-rose-400">Apagar Conta</h3>
             <p className="text-xs text-slate-400">Apaga permanentemente seu perfil e dados financeiros.</p>
           </div>
           <button
