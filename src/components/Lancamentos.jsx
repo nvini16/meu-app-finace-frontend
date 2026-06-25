@@ -8,6 +8,7 @@ import autoTable from 'jspdf-autotable';
 
 export default function Lancamentos({ session }) {
   const [transacoes, setTransacoes] = useState([]);
+  const [editandoId, setEditandoId] = useState(null); // ESTADO PARA CONTROLAR SE ESTAMOS EDITANDO
 
   const [form, setForm] = useState({
     data: new Date().toISOString().split('T')[0],
@@ -54,11 +55,37 @@ export default function Lancamentos({ session }) {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  //  FUNÇÃO QUE PREPARA O FORMULÁRIO PARA EDIÇÃO
+  const handleIniciarEdicao = (t) => {
+    setEditandoId(t.id);
+    setForm({
+      data: t.data,
+      descricao: t.descricao,
+      valor: t.valor.toString(),
+      categoria: t.categoria,
+      tipo: t.tipo,
+      formaPagamento: t.formaPagamento
+    });
+  };
+
+  // FUNÇÃO PARA CANCELAR A EDIÇÃO E LIMPAR O FORMULÁRIO
+  const handleCancelarEdicao = () => {
+    setEditandoId(null);
+    setForm({
+      data: new Date().toISOString().split('T')[0],
+      descricao: '',
+      valor: '',
+      categoria: 'Alimentação',
+      tipo: 'Gasto',
+      formaPagamento: 'Cartão de Crédito'
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.descricao || !form.valor) return alert('Por favor, preencha os dados!');
 
-    const novaLinha = {
+    const dadosLinha = {
       user_id: session.user.id,
       data: form.data,
       descricao: form.descricao,
@@ -68,38 +95,81 @@ export default function Lancamentos({ session }) {
       forma_pagamento: form.formaPagamento
     };
 
-    const { data, error } = await supabase
-      .from('transacoes')
-      .insert([novaLinha])
-      .select();
+    if (editandoId) {
+      // LÓGICA DE ATUALIZAÇÃO (UPDATE)
+      const { data, error } = await supabase
+        .from('transacoes')
+        .update(dadosLinha)
+        .eq('id', editandoId)
+        .select();
 
-    if (error) {
-      console.error('Erro ao salvar:', error.message);
-      alert('Erro ao salvar o lançamento!');
-    } else {
-      if (data && data.length > 0) {
-        const transacaoCriada = {
-          id: data[0].id,
-          data: data[0].data,
-          descricao: data[0].descricao,
-          valor: data[0].valor,
-          categoria: data[0].categoria,
-          tipo: data[0].tipo,
-          formaPagamento: data[0].forma_pagamento
-        };
-        setTransacoes([transacaoCriada, ...transacoes]);
+      if (error) {
+        console.error('Erro ao atualizar:', error.message);
+        alert('Erro ao atualizar o lançamento!');
       } else {
-        buscarTransacoes();
+        if (data && data.length > 0) {
+          const transacaoAtualizada = {
+            id: data[0].id,
+            data: data[0].data,
+            descricao: data[0].descricao,
+            valor: data[0].valor,
+            categoria: data[0].categoria,
+            tipo: data[0].tipo,
+            formaPagamento: data[0].forma_pagamento
+          };
+          // Atualiza o estado local substituindo apenas o item editado
+          setTransacoes(transacoes.map(t => t.id === editandoId ? transacaoAtualizada : t));
+        } else {
+          buscarTransacoes();
+        }
+        
+        setEditandoId(null); // Sai do modo de edição
+        setForm({
+          data: new Date().toISOString().split('T')[0],
+          descricao: '',
+          valor: '',
+          categoria: 'Alimentação',
+          tipo: 'Gasto',
+          formaPagamento: 'Cartão de Crédito'
+        });
+        alert('Lançamento atualizado com sucesso!');
       }
 
-      setForm({
-        data: new Date().toISOString().split('T')[0],
-        descricao: '',
-        valor: '',
-        categoria: 'Alimentação',
-        tipo: 'Gasto',
-        formaPagamento: 'Cartão de Crédito'
-      });
+    } else {
+      // LÓGICA DE INSERÇÃO EXISTENTE (INSERT)
+      const { data, error } = await supabase
+        .from('transacoes')
+        .insert([dadosLinha])
+        .select();
+
+      if (error) {
+        console.error('Erro ao salvar:', error.message);
+        alert('Erro ao salvar o lançamento!');
+      } else {
+        if (data && data.length > 0) {
+          const transacaoCriada = {
+            id: data[0].id,
+            data: data[0].data,
+            descricao: data[0].descricao,
+            valor: data[0].valor,
+            categoria: data[0].categoria,
+            tipo: data[0].tipo,
+            formaPagamento: data[0].forma_pagamento
+          };
+          setTransacoes([transacaoCriada, ...transacoes]);
+        } else {
+          buscarTransacoes();
+        }
+
+        setForm({
+          data: new Date().toISOString().split('T')[0],
+          descricao: '',
+          valor: '',
+          categoria: 'Alimentação',
+          tipo: 'Gasto',
+          formaPagamento: 'Cartão de Crédito'
+        });
+      }
     }
   };
 
@@ -114,6 +184,8 @@ export default function Lancamentos({ session }) {
         console.error('Erro ao deletar:', error.message);
         alert('Não foi possível excluir o registro.');
       } else {
+        // Se deletar o item que estava sendo editado, limpa o formulário
+        if (editandoId === id) setEditandoId(null);
         setTransacoes(transacoes.filter(t => t.id !== id));
       }
     }
@@ -196,7 +268,7 @@ export default function Lancamentos({ session }) {
     }
   };
 
-  //  MECANISMO DE BACKUP: GERAÇÃO E DOWNLOAD DO ARQUIVO JSON
+  // MECANISMO DE BACKUP: GERAÇÃO E DOWNLOAD DO ARQUIVO JSON
   const exportarParaJSON = useCallback((silencioso = false) => {
     if (transacoes.length === 0) {
       if (!silencioso) alert('Não há dados de lançamentos para criar um backup!');
@@ -214,7 +286,6 @@ export default function Lancamentos({ session }) {
       link.click();
       URL.revokeObjectURL(url);
 
-      // Guarda a data em que o último backup via arquivo foi gerado
       localStorage.setItem('alvocapital_ultimo_backup_data', hojeStr);
       if (!silencioso) alert('Backup de segurança (.json) gerado e baixado com sucesso!');
     } catch (error) {
@@ -223,15 +294,15 @@ export default function Lancamentos({ session }) {
     }
   }, [transacoes]);
 
-  //  CAMADA 1: ESPELHAMENTO AUTOMÁTICO EM TEMPO REAL NO LOCALSTORAGE
+  // CAMADA 1: ESPELHAMENTO AUTOMÁTICO EM TEMPO REAL NO LOCALSTORAGE
   useEffect(() => {
     if (transacoes.length > 0 && session?.user?.id) {
       localStorage.setItem(`alvocapital_backup_local_${session.user.id}`, JSON.stringify(transacoes));
     }
   }, [transacoes, session]);
 
-  //  CAMADA 2: ROTINA DE BACKUP AUTOMÁTICO EM ARQUIVO A CADA 7 DIAS
-   useEffect(() => {
+  // CAMADA 2: ROTINA DE BACKUP AUTOMÁTICO EM ARQUIVO A CADA 7 DIAS
+  useEffect(() => {
     if (transacoes.length === 0) return;
 
     const ultimaDataBackup = localStorage.getItem('alvocapital_ultimo_backup_data');
@@ -257,7 +328,7 @@ export default function Lancamentos({ session }) {
         {/* CABEÇALHO */}
         <header className="flex justify-between items-center border-b border-slate-800 pb-1 pt-0">
           
-          {/* LADO ESQUERDO: A Logo (Com margem negativa para não esticar o header) */}
+          {/* LADO ESQUERDO: A Logo */}
           <img 
             src="/publicpwa-512x512.png" 
             alt="Alvocapital" 
@@ -278,9 +349,11 @@ export default function Lancamentos({ session }) {
         {/* GRID DO FORMULÁRIO E DA TABELA */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           
-          {/* FORMULÁRIO */}
+          {/* FORMULÁRIO COM CONTROLE DINÂMICO DE EDIÇÃO */}
           <form onSubmit={handleSubmit} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4">
-            <h2 className="text-lg font-semibold text-slate-200 mb-2 border-b border-slate-800 pb-2">Novo Lançamento</h2>
+            <h2 className="text-lg font-semibold text-slate-200 mb-2 border-b border-slate-800 pb-2">
+              {editandoId ? 'Editar Lançamento' : 'Novo Lançamento'}
+            </h2>
             
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
@@ -373,12 +446,25 @@ export default function Lancamentos({ session }) {
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold py-3 rounded-lg transition-all cursor-pointer text-sm"
-            >
-              Confirmar Lançamento
-            </button>
+            {/* BOTÕES DINÂMICOS DO FORMULÁRIO */}
+            <div className="space-y-2 pt-2">
+              <button
+                type="submit"
+                className={`w-full font-semibold py-3 rounded-lg transition-all cursor-pointer text-sm ${editandoId ? 'bg-amber-500 hover:bg-amber-600 text-slate-950' : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950'}`}
+              >
+                {editandoId ? 'Salvar Alterações' : 'Confirmar Lançamento'}
+              </button>
+
+              {editandoId && (
+                <button
+                  type="button"
+                  onClick={handleCancelarEdicao}
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-2 rounded-lg transition-all cursor-pointer text-xs border border-slate-700"
+                >
+                  Cancelar Edição
+                </button>
+              )}
+            </div>
           </form>
 
           {/* TABELA HISTÓRICO COM OS BOTÕES DE AÇÃO ADICIONADOS */}
@@ -393,7 +479,6 @@ export default function Lancamentos({ session }) {
               
               {/* ÁREA DE EXPORTAÇÃO E BACKUP */}
               <div className="flex items-center gap-2">
-                {/* Botão Exportar PDF */}
                 <button
                   type="button"
                   onClick={exportarParaPDF}
@@ -402,7 +487,6 @@ export default function Lancamentos({ session }) {
                   <span>⥥</span> Exportar PDF
                 </button>
 
-                {/* Botão Criar Backup Manual (.JSON) */}
                 <button
                   type="button"
                   onClick={() => exportarParaJSON(false)}
@@ -428,7 +512,7 @@ export default function Lancamentos({ session }) {
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {transacoes.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-800/30 transition-colors">
+                    <tr key={t.id} className={`transition-colors ${editandoId === t.id ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-slate-800/30'}`}>
                       <td className="p-4 text-slate-300 font-mono whitespace-nowrap">{t.data.split('-').reverse().join('/')}</td>
                       <td className="p-4 font-medium text-slate-100">{t.descricao}</td>
                       <td className="p-4">
@@ -440,14 +524,25 @@ export default function Lancamentos({ session }) {
                       <td className={`p-4 text-right font-semibold whitespace-nowrap ${t.tipo === 'Receita' ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {t.tipo === 'Receita' ? '+' : '-'} R$ {formatarMoeda(t.valor)}
                       </td>
-                      <td className="p-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleExcluir(t.id)}
-                          className="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors cursor-pointer text-xs"
-                        >
-                          Excluir
-                        </button>
+                      <td className="p-4 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-3">
+                          {/* 🌟 BOTÃO EDITAR ADICIONADO */}
+                          <button
+                            type="button"
+                            onClick={() => handleIniciarEdicao(t)}
+                            className="text-slate-400 hover:text-amber-400 transition-colors cursor-pointer text-xs font-medium"
+                          >
+                            Editar
+                          </button>
+                          <span className="text-slate-700">|</span>
+                          <button
+                            type="button"
+                            onClick={() => handleExcluir(t.id)}
+                            className="text-slate-500 hover:text-rose-400 transition-colors cursor-pointer text-xs"
+                          >
+                            Excluir
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
