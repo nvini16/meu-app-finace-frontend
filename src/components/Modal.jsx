@@ -16,9 +16,9 @@ export default function Modal({ isOpen, onClose, onConfirm, title, message, tipo
         {/* TÍTULO E ÍCONE */}
         <div className="flex items-center space-x-3">
           {tipo === 'perigo' ? (
-            <span className="text-xl bg-rose-500/10 text-rose-400 p-2 rounded-lg">⚠️</span>
+            <span className="text-xl bg-rose-500/10 text-rose-400 p-2 rounded-lg">∵</span>
           ) : (
-            <span className="text-xl bg-emerald-500/10 text-emerald-400 p-2 rounded-lg">👍</span>
+            <span className="text-xl bg-emerald-500/10 text-emerald-400 p-2 rounded-lg">∴</span>
           )}
           <h3 className="text-lg font-bold text-slate-100">{title}</h3>
         </div>

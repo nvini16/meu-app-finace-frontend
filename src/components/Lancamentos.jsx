@@ -1,6 +1,10 @@
 import { supabase } from '../supabaseClient';
 import { useState, useEffect, useCallback } from 'react';
-import Dashboard from './Dashboard'; // 🌟 Importa o novo painel completo
+import Dashboard from './Dashboard'; // Importa o novo painel completo
+
+// IMPORTAÇÕES AJUSTADAS E SEGURAS PARA EVITAR CRASH NO VITE
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function Lancamentos({ session }) {
   const [transacoes, setTransacoes] = useState([]);
@@ -37,11 +41,10 @@ export default function Lancamentos({ session }) {
       }));
       setTransacoes(dadosFormatados);
     }
-  }, [session]); // ALTERADO AQUI: De session?.user?.id para session
+  }, [session]);
 
   // 2. CARREGAR DADOS AO MONTAR A TELA
   useEffect(() => {
-    // Envelopado em uma Promise para garantir execução assíncrona fora do fluxo principal
     Promise.resolve().then(() => {
       buscarTransacoes();
     });
@@ -120,6 +123,79 @@ export default function Lancamentos({ session }) {
     return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
+  //  FUNÇÃO DE EXPORTAÇÃO COMPLETA E PROTEGIDA CONTRA ERROS SILENCIOSOS
+  const exportarParaPDF = () => {
+    if (transacoes.length === 0) {
+      return alert('Não há lançamentos para exportar!');
+    }
+
+    try {
+      const doc = new jsPDF();
+
+      // 1. Cabeçalho do PDF
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(16, 185, 129); // Emerald do Alvocapital
+      doc.text('Alvocapital', 14, 20);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Relatório de Controle Financeiro Pessoal', 14, 26);
+      doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 31);
+
+      // 2. Resumos Financeiros para o Topo do PDF
+      const totalReceitas = transacoes.filter(t => t.tipo === 'Receita').reduce((acc, curr) => acc + curr.valor, 0);
+      const totalGastos = transacoes.filter(t => t.tipo === 'Gasto').reduce((acc, curr) => acc + curr.valor, 0);
+      const saldoTotal = totalReceitas - totalGastos;
+
+      doc.setFillColor(241, 245, 249); 
+      doc.rect(14, 38, 182, 24, 'F');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(15, 23, 42);
+      
+      doc.text(`Total Receitas: R$ ${formatarMoeda(totalReceitas)}`, 18, 44);
+      doc.text(`Total Gastos: R$ ${formatarMoeda(totalGastos)}`, 18, 50);
+      
+      if (saldoTotal >= 0) doc.setTextColor(16, 185, 129); else doc.setTextColor(244, 63, 94);
+      doc.text(`Saldo Líquido: R$ ${formatarMoeda(saldoTotal)}`, 18, 56);
+
+      // 3. Mapeamento dos Dados da Tabela com travas de segurança
+      const colunasTabela = ['Data', 'Descrição', 'Categoria', 'Forma Pagamento', 'Tipo', 'Valor'];
+      const linhasTabela = transacoes.map(t => [
+        t.data ? t.data.split('-').reverse().join('/') : 'N/A',
+        t.descricao || '',
+        t.categoria || '',
+        t.formaPagamento || '',
+        t.tipo || '',
+        `${t.tipo === 'Receita' ? '+' : '-'} R$ ${formatarMoeda(t.valor || 0)}`
+      ]);
+
+      // Chamada direta do autoTable (Evita o erro clássico 'doc.autoTable is not a function')
+      autoTable(doc, {
+        head: [colunasTabela],
+        body: linhasTabela,
+        startY: 68,
+        theme: 'striped',
+        headStyles: { fillColor: [16, 185, 129], fontStyle: 'bold' },
+        styles: { font: 'helvetica', fontSize: 9 },
+        columnStyles: {
+          5: { halign: 'right', fontStyle: 'bold' }
+        }
+      });
+
+      // 4. Salvar arquivo
+      const dataFormatada = new Date().toISOString().split('T')[0];
+      doc.save(`relatorio_alvocapital_${dataFormatada}.pdf`);
+
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      alert(`Ocorreu um erro técnico ao gerar o PDF: ${error.message}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-100 p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -132,7 +208,7 @@ export default function Lancamentos({ session }) {
           </div>
         </header>
 
-        {/* 🌟 PAINEL DE CARDS E GRÁFICOS DUPLOS (Injetado com as transações do estado local) */}
+        {/* PAINEL DE CARDS E GRÁFICOS DUPLOS */}
         <Dashboard transacoes={transacoes} />
 
         {/* GRID DO FORMULÁRIO E DA TABELA */}
@@ -241,13 +317,24 @@ export default function Lancamentos({ session }) {
             </button>
           </form>
 
-          {/* TABELA HISTÓRICO */}
+          {/* TABELA HISTÓRICO COM O BOTÃO ADICIONADO */}
           <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-slate-200">Histórico de Fluxo</h2>
-              <span className="text-xs bg-slate-800 px-2.5 py-1 rounded-full text-slate-400 font-medium">
-                {transacoes.length} registros
-              </span>
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-semibold text-slate-200">Histórico de Fluxo</h2>
+                <span className="text-xs bg-slate-800 px-2.5 py-1 rounded-full text-slate-400 font-medium">
+                  {transacoes.length} registros
+                </span>
+              </div>
+              
+              {/* BOTÃO DE EXPORTAÇÃO INSERIDO DO LADO DIREITO */}
+              <button
+                type="button"
+                onClick={exportarParaPDF}
+                className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded-lg transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                <span>⥥</span> Exportar PDF
+              </button>
             </div>
 
             <div className="overflow-x-auto">
