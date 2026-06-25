@@ -196,6 +196,60 @@ export default function Lancamentos({ session }) {
     }
   };
 
+  //  MECANISMO DE BACKUP: GERAÇÃO E DOWNLOAD DO ARQUIVO JSON
+  const exportarParaJSON = useCallback((silencioso = false) => {
+    if (transacoes.length === 0) {
+      if (!silencioso) alert('Não há dados de lançamentos para criar um backup!');
+      return;
+    }
+    try {
+      const dataStr = JSON.stringify(transacoes, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      const hojeStr = new Date().toISOString().split('T')[0];
+      link.download = `alvocapital_backup_${hojeStr}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      // Guarda a data em que o último backup via arquivo foi gerado
+      localStorage.setItem('alvocapital_ultimo_backup_data', hojeStr);
+      if (!silencioso) alert('Backup de segurança (.json) gerado e baixado com sucesso!');
+    } catch (error) {
+      console.error("Erro ao exportar backup em JSON:", error);
+      if (!silencioso) alert("Erro técnico ao gerar o arquivo de backup.");
+    }
+  }, [transacoes]);
+
+  //  CAMADA 1: ESPELHAMENTO AUTOMÁTICO EM TEMPO REAL NO LOCALSTORAGE
+  useEffect(() => {
+    if (transacoes.length > 0 && session?.user?.id) {
+      localStorage.setItem(`alvocapital_backup_local_${session.user.id}`, JSON.stringify(transacoes));
+    }
+  }, [transacoes, session]);
+
+  //  CAMADA 2: ROTINA DE BACKUP AUTOMÁTICO EM ARQUIVO A CADA 7 DIAS
+   useEffect(() => {
+    if (transacoes.length === 0) return;
+
+    const ultimaDataBackup = localStorage.getItem('alvocapital_ultimo_backup_data');
+    const hoje = new Date();
+
+    if (!ultimaDataBackup) {
+      exportarParaJSON(true);
+    } else {
+      const dataUltimo = new Date(ultimaDataBackup);
+      const diferencaTempo = hoje.getTime() - dataUltimo.getTime();
+      const diferencaDias = Math.floor(diferencaTempo / (1000 * 60 * 60 * 24));
+
+      if (diferencaDias >= 7) {
+        exportarParaJSON(true);
+      }
+    }
+  }, [transacoes, exportarParaJSON]);
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-100 p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -317,7 +371,7 @@ export default function Lancamentos({ session }) {
             </button>
           </form>
 
-          {/* TABELA HISTÓRICO COM O BOTÃO ADICIONADO */}
+          {/* TABELA HISTÓRICO COM OS BOTÕES DE AÇÃO ADICIONADOS */}
           <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-slate-800 flex justify-between items-center">
               <div className="flex items-center gap-3">
@@ -327,14 +381,27 @@ export default function Lancamentos({ session }) {
                 </span>
               </div>
               
-              {/* BOTÃO DE EXPORTAÇÃO INSERIDO DO LADO DIREITO */}
-              <button
-                type="button"
-                onClick={exportarParaPDF}
-                className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded-lg transition-all shadow-md cursor-pointer flex items-center gap-1.5"
-              >
-                <span>⥥</span> Exportar PDF
-              </button>
+              {/* ÁREA DE EXPORTAÇÃO E BACKUP */}
+              <div className="flex items-center gap-2">
+                {/* Botão Exportar PDF */}
+                <button
+                  type="button"
+                  onClick={exportarParaPDF}
+                  className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-3 py-1.5 rounded-lg transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>⥥</span> Exportar PDF
+                </button>
+
+                {/* Botão Criar Backup Manual (.JSON) */}
+                <button
+                  type="button"
+                  onClick={() => exportarParaJSON(false)}
+                  className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-3 py-1.5 rounded-lg transition-all border border-slate-700/80 cursor-pointer flex items-center gap-1.5"
+                  title="Gerar cópia de segurança em JSON manualmente"
+                >
+                  <span>⥣</span> Criar Backup
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
