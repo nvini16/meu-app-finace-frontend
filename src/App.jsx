@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import Login from './components/Login';
 import Lancamentos from './components/Lancamentos';
+import Perfil from './components/Perfil'; // Importando a nova tela de Configurações
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('lancamentos'); // Controla qual aba está ativa ('lancamentos' ou 'configuracoes')
 
   useEffect(() => {
     // 1. Pega a sessão atual assim que o app carrega
@@ -14,39 +16,17 @@ export default function App() {
       setLoading(false);
     });
 
-    // 2. Escuta mudanças no estado de autenticação (Login / Logout)
+    // 2. Escuta mudanças no estado de autenticação (Login / Logout / Exclusão de Conta)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      // Se o usuário deslogar ou deletar a conta, resetamos a visualização para a aba padrão
+      if (!session) {
+        setActiveTab('lancamentos');
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
-
- const handleDeleteAccount = async () => {
-    const confirmar = window.confirm(
-      "ATENÇÃO: Tem certeza que deseja deletar sua conta?\n\nTodos os seus lançamentos financeiros serão apagados permanentemente e esta ação não poderá ser desfeita."
-    );
-
-    if (!confirmar) return;
-
-    try {
-      // 1. Deleta o usuário lá no banco de dados do Supabase
-      const { error } = await supabase.rpc('deletar_propria_conta');
-      if (error) throw error;
-
-      // 2. O AJUSTE: Força a limpeza do token local no navegador
-      await supabase.auth.signOut();
-
-      alert("Sua conta e todos os seus dados foram apagados com sucesso.");
-      
-    } catch (error) {
-      alert(`Erro ao deletar conta: ${error.message}`);
-    }
-  };
 
   if (loading) {
     return (
@@ -61,31 +41,47 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Header atualizado com os dois botões */}
-      <header className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center border-b border-slate-900">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      
+      {/* Header atualizado com o menu de Navegação por Abas */}
+      <header className="max-w-7xl w-full mx-auto px-4 py-4 flex justify-between items-center border-b border-slate-900">
         <h1 className="text-xl font-bold text-emerald-400">Alvocapital</h1>
         
-        <div className="flex items-center gap-3">
+        {/* Sistema de abas no cabeçalho */}
+        <nav className="flex items-center gap-2">
           <button
-            onClick={handleLogout}
-            className="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 px-3 py-1.5 rounded-lg transition-colors"
+            onClick={() => setActiveTab('lancamentos')}
+            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+              activeTab === 'lancamentos'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800/80'
+            }`}
           >
-            Sair da Conta
+            Lançamentos
           </button>
           
           <button
-            onClick={handleDeleteAccount}
-            className="text-xs bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900/50 text-rose-400 hover:text-rose-200 px-3 py-1.5 rounded-lg transition-colors font-medium"
+            onClick={() => setActiveTab('configuracoes')}
+            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+              activeTab === 'configuracoes'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800/80'
+            }`}
           >
-            Deletar Conta
+            Configurações
           </button>
-        </div>
+        </nav>
       </header>
 
-      <main className="py-6">
-        <Lancamentos session={session} />
+      {/* Conteúdo principal renderizado dinamicamente de acordo com a aba ativa */}
+      <main className="flex-1 py-6">
+        {activeTab === 'lancamentos' ? (
+          <Lancamentos session={session} />
+        ) : (
+          <Perfil session={session} />
+        )}
       </main>
+
     </div>
   );
 }

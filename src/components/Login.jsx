@@ -1,11 +1,30 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
+import Modal from './Modal'; // Importando seu modal customizado
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false); // Alterna entre Login e Cadastro
+
+  // Estado dinâmico para controlar as configurações do modal
+  const [modal, setModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    tipo: 'perigo'
+  });
+
+  // Função utilitária para abrir o modal rapidamente
+  const dispararModal = (title, message, tipo = 'perigo') => {
+    setModal({
+      isOpen: true,
+      title,
+      message,
+      tipo
+    });
+  };
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -14,12 +33,21 @@ export default function Login() {
     if (isSignUp) {
       // Fluxo de Cadastro
       const { error } = await supabase.auth.signUp({ email, password });
-      if (error) alert(`Erro no cadastro: ${error.message}`);
-      else alert('Cadastro realizado com sucesso! Verifique seu e-mail para confirmar a conta.');
+      if (error) {
+        dispararModal('Erro no Cadastro', error.message, 'perigo');
+      } else {
+        dispararModal(
+          'Conta Criada!',
+          'Cadastro realizado com sucesso! Enviamos um link de ativação para o seu e-mail. Verifique a caixa de entrada ou spam.',
+          'sucesso'
+        );
+      }
     } else {
       // Fluxo de Login
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) alert(`Erro no login: ${error.message}`);
+      if (error) {
+        dispararModal('Falha na Autenticação', error.message, 'perigo');
+      }
     }
     
     setLoading(false);
@@ -61,7 +89,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-lg transition-colors shadow-lg shadow-emerald-900/20 disabled:opacity-50"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-lg transition-colors shadow-lg shadow-emerald-900/20 disabled:opacity-50 cursor-pointer"
           >
             {loading ? 'Processando...' : isSignUp ? 'Criar Conta' : 'Entrar'}
           </button>
@@ -71,12 +99,22 @@ export default function Login() {
           {isSignUp ? 'Já tem uma conta?' : 'Ainda não tem conta?'} {' '}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-emerald-400 hover:underline font-medium"
+            className="text-emerald-400 hover:underline font-medium cursor-pointer"
           >
             {isSignUp ? 'Fazer Login' : 'Cadastre-se'}
           </button>
         </div>
       </div>
+
+      {/* O MODAL FICA AQUI INSTANCIADO DINAMICAMENTE */}
+      <Modal
+        isOpen={modal.isOpen}
+        title={modal.title}
+        message={modal.message}
+        tipo={modal.tipo}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        onConfirm={() => setModal({ ...modal, isOpen: false })} // Para avisos informativos, o confirmar apenas fecha o modal
+      />
     </div>
   );
 }
