@@ -1,3 +1,4 @@
+import ChatAlvo from './ChatAlvo';
 import { supabase } from '../supabaseClient';
 import { useState, useEffect, useCallback } from 'react';
 import Dashboard from './Dashboard';
@@ -556,12 +557,15 @@ export default function Lancamentos({ session }) {
                     </tr>
                   )}
                 </tbody>
-              </table>
-            </div>
+            </table>
           </div>
+        </div>
 
         </div>
       </div>
+
+      {/* SEU COMPONENTE DE CHAT FLUTUANTE DA IA */}
+      <ChatAlvo transacoes={transacoes} mesSelecionado={mesSelecionado} />
     </div>
   );
 }
