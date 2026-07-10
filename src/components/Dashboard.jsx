@@ -12,6 +12,15 @@ export default function Dashboard({ transacoes = [] }) {
   const [limite, setLimite] = useState('');
   const [loadingForm, setLoadingForm] = useState(false);
 
+  // ESTADO PARA O BADGE DE NOVIDADE (Corrigido: Já nasce com o valor certo do localStorage)
+  const [exibirNovidade, setExibirNovidade] = useState(() => {
+    if (typeof window !== 'undefined') {
+      // Se NÃO existir o registro, retorna true (mostra a novidade). Se existir, retorna false.
+      return !localStorage.getItem('alvocapital_novidade_metas');
+    }
+    return false;
+  });
+
   // CÁLCULOS MATEMÁTICOS
   const totalReceitas = transacoes
     .filter(t => t.tipo === 'Receita')
@@ -41,6 +50,7 @@ export default function Dashboard({ transacoes = [] }) {
   }
 
   useEffect(() => {
+    // Carrega os dados normais do banco
     carregarMetasDoBanco()
       .then((dados) => {
         setMetas(dados);
@@ -48,7 +58,19 @@ export default function Dashboard({ transacoes = [] }) {
       .catch((error) => {
         console.error('Erro ao carregar metas:', error);
       });
+
+    // Se for a primeira vez que o utilizador entra, grava já no localStorage para o próximo F5
+    if (typeof window !== 'undefined' && !localStorage.getItem('alvocapital_novidade_metas')) {
+      localStorage.setItem('alvocapital_novidade_metas', 'true');
+    }
   }, []);
+
+  // FUNÇÃO PARA REMOVER O AVISO ASSIM QUE HOUVER INTERAÇÃO
+  const lidarComInteracao = () => {
+    if (exibirNovidade) {
+      setExibirNovidade(false);
+    }
+  };
 
   // 2. FUNÇÃO PARA ADICIONAR NOVA CATEGORIA/TETO NO BANCO
   async function handleSubmit(e) {
@@ -65,7 +87,7 @@ export default function Dashboard({ transacoes = [] }) {
         .insert([
           {
             categoria: categoria,
-            limite: parseFloat(limite), // CORRIGIDO: Nome exato da coluna no seu Supabase
+            limite: parseFloat(limite),
             mes_ano: mesAtual,
             user_id: user?.id
           }
@@ -147,10 +169,23 @@ export default function Dashboard({ transacoes = [] }) {
 
       {/* SEÇÃO DE TETOS E LIMITES */}
       <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-        <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-emerald-400">
-            Limites de Gastos do Mês
-          </h2>
+        <div 
+          onClick={lidarComInteracao}
+          className="flex justify-between items-center mb-4 border-b border-slate-800 pb-2 select-none"
+        >
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-emerald-400">
+              Limites de Gastos do Mês
+            </h2>
+            
+            {/* BADGE DINÂMICO "NOVO!" */}
+            {exibirNovidade && (
+              <span className="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded-md animate-pulse decoration-none">
+                NOVO!
+              </span>
+            )}
+          </div>
+
           <button
             onClick={() => setMostrarForm(!mostrarForm)}
             className="text-xs bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-lg transition-all cursor-pointer font-medium"
@@ -214,7 +249,7 @@ export default function Dashboard({ transacoes = [] }) {
                   <div className="flex-1">
                     <BarraMeta 
                       categoria={meta.categoria}
-                      limite={meta.limite} // CORRIGIDO: Passando o valor da nova coluna correta para o componente visual
+                      limite={meta.limite}
                       gasto={gastoAtual}
                     />
                   </div>
