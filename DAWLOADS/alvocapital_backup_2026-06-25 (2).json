@@ -1,0 +1,83 @@
+[
+  {
+    "id": 12,
+    "data": "2026-06-25",
+    "descricao": "Salário",
+    "valor": 1500,
+    "categoria": "Salário",
+    "tipo": "Receita",
+    "formaPagamento": "Pix"
+  },
+  {
+    "id": 13,
+    "data": "2026-06-25",
+    "descricao": "Lanche",
+    "valor": 50,
+    "categoria": "Alimentação",
+    "tipo": "Gasto",
+    "formaPagamento": "Cartão de Crédito"
+  },
+  {
+    "id": 14,
+    "data": "2026-06-25",
+    "descricao": "Roupas novas",
+    "valor": 40,
+    "categoria": "Lazer",
+    "tipo": "Gasto",
+    "formaPagamento": "Cartão de Crédito"
+  },
+  {
+    "id": 15,
+    "data": "2026-06-25",
+    "descricao": "Casa",
+    "valor": 1000,
+    "categoria": "Aluguel",
+    "tipo": "Gasto",
+    "formaPagamento": "Boleto"
+  },
+  {
+    "id": 16,
+    "data": "2026-06-25",
+    "descricao": "Bicicleta",
+    "valor": 199.98,
+    "categoria": "Transporte",
+    "tipo": "Gasto",
+    "formaPagamento": "Dinheiro"
+  },
+  {
+    "id": 17,
+    "data": "2026-06-25",
+    "descricao": "Compras do Mês",
+    "valor": 100,
+    "categoria": "Outros",
+    "tipo": "Gasto",
+    "formaPagamento": "Cartão de Crédito"
+  },
+  {
+    "id": 18,
+    "data": "2026-06-25",
+    "descricao": "Compras Shopping",
+    "valor": 100,
+    "categoria": "Lazer",
+    "tipo": "Gasto",
+    "formaPagamento": "Cartão de Crédito"
+  },
+  {
+    "id": 19,
+    "data": "2026-06-25",
+    "descricao": "Salário",
+    "valor": 1000,
+    "categoria": "Salário",
+    "tipo": "Receita",
+    "formaPagamento": "Cartão de Crédito"
+  },
+  {
+    "id": 20,
+    "data": "2026-06-25",
+    "descricao": "Mercado",
+    "valor": 200,
+    "categoria": "Lazer",
+    "tipo": "Receita",
+    "formaPagamento": "Cartão de Crédito"
+  }
+]

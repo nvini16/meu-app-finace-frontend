@@ -1,0 +1,20 @@
+[
+  {
+    "id": 33,
+    "data": "2026-06-26",
+    "descricao": "Lanche",
+    "valor": 50,
+    "categoria": "Alimentação",
+    "tipo": "Gasto",
+    "formaPagamento": "Cartão de Crédito"
+  },
+  {
+    "id": 28,
+    "data": "2026-06-25",
+    "descricao": "Salário",
+    "valor": 20000,
+    "categoria": "Outros",
+    "tipo": "Receita",
+    "formaPagamento": "Cartão de Crédito"
+  }
+]
