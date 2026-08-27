@@ -299,11 +299,11 @@ export default function Lancamentos({ session }) {
         
         {/* CABEÇALHO COM LOGO CORRIGIDA */}
         <header className="flex justify-between items-center border-b border-slate-800 pb-1 pt-0">
-          <img 
-            src="/publicpwa-512x512.png" 
-            alt="Alvocapital" 
-            className="w-48 h-48 object-contain opacity-50 drop-shadow-[0_0_8px_rgba(52,211,153,0.2)] -my-16 -ml-4" 
-          />
+          <img
+  src="/publicpwa-512x512.png"
+  alt="Alvocapital"
+  className="w-20 h-20 object-contain drop-shadow-[0_0_16px_rgba(52,211,153,0.3)]"
+/>
           <div className="text-right py-2">
             <h1 className="text-2xl font-bold tracking-tight text-emerald-400 leading-tight">Alvocapital</h1>
             <p className="text-xs text-slate-500 leading-none mt-1">Controle Financeiro Pessoal</p>
