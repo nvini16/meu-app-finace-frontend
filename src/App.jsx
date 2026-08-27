@@ -1,87 +1,72 @@
-import { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import Login from './components/Login';
 import Lancamentos from './components/Lancamentos';
-import Perfil from './components/Perfil'; // Importando a nova tela de Configurações
+import Perfil from './components/Perfil';
+import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
 
-export default function App() {
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('lancamentos'); // Controla qual aba está ativa ('lancamentos' ou 'configuracoes')
-
-  useEffect(() => {
-    // 1. Pega a sessão atual assim que o app carrega
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    // 2. Escuta mudanças no estado de autenticação (Login / Logout / Exclusão de Conta)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      // Se o usuário deslogar ou deletar a conta, resetamos a visualização para a aba padrão
-      if (!session) {
-        setActiveTab('lancamentos');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-emerald-400 font-medium">
-        Carregando Seu Alvocapital...
-      </div>
-    );
-  }
-
-  if (!session) {
-    return <Login />;
-  }
+function Dashboard() {
+  const { session, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      
-      {/* Header atualizado com o menu de Navegação por Abas */}
       <header className="max-w-7xl w-full mx-auto px-4 py-4 flex justify-between items-center border-b border-slate-900">
         <h1 className="text-xl font-bold text-emerald-400">Alvocapital</h1>
-        
-        {/* Sistema de abas no cabeçalho */}
+
         <nav className="flex items-center gap-2">
           <button
-            onClick={() => setActiveTab('lancamentos')}
-            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'lancamentos'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800/80'
-            }`}
+            onClick={() => navigate('/lancamentos')}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800/80 cursor-pointer"
           >
             Lançamentos
           </button>
-          
           <button
-            onClick={() => setActiveTab('configuracoes')}
-            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'configuracoes'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800/80'
-            }`}
+            onClick={() => navigate('/perfil')}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800/80 cursor-pointer"
           >
             Configurações
+          </button>
+          <button
+            onClick={async () => {
+              await signOut();
+              navigate('/login', { replace: true });
+            }}
+            className="text-xs px-3 py-1.5 rounded-lg font-medium text-red-400 hover:text-red-300 cursor-pointer"
+          >
+            Sair
           </button>
         </nav>
       </header>
 
-      {/* Conteúdo principal renderizado dinamicamente de acordo com a aba ativa */}
       <main className="flex-1 py-6">
-        {activeTab === 'lancamentos' ? (
-          <Lancamentos session={session} />
-        ) : (
-          <Perfil session={session} />
-        )}
+        <Routes>
+          <Route index element={<Navigate to="/lancamentos" replace />} />
+          <Route path="lancamentos" element={<Lancamentos session={session} />} />
+          <Route path="perfil" element={<Perfil session={session} />} />
+          <Route path="*" element={<Navigate to="/lancamentos" replace />} />
+        </Routes>
       </main>
-
     </div>
   );
 }
+
+function App() {
+  const { session } = useAuth();
+
+  return (
+    <Routes>
+      <Route path="/login" element={session ? <Navigate to="/lancamentos" replace /> : <Login />} />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+}
+
+export default App;
