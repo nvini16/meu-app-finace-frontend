@@ -27,7 +27,7 @@ function Dashboard() {
           >
             Configurações
           </button>
-          <button
+          {/* <button
             onClick={async () => {
               await signOut();
               navigate('/login', { replace: true });
@@ -35,7 +35,7 @@ function Dashboard() {
             className="text-xs px-3 py-1.5 rounded-lg font-medium text-red-400 hover:text-red-300 cursor-pointer"
           >
             Sair
-          </button>
+          </button> */}
         </nav>
       </header>
 

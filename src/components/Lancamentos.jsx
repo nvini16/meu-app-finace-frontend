@@ -177,9 +177,9 @@ export default function Lancamentos({ session }) {
           data: new Date().toISOString().split('T')[0],
           descricao: '',
           valor: '',
-          categoria: 'Alimentação',
+          categoria: 'Escolha uma categoria',
           tipo: 'Gasto',
-          formaPagamento: 'Cartão de Crédito'
+          formaPagamento: 'Escolha sua forma de pagamento'
         });
       }
     }
