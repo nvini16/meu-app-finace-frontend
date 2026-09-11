@@ -14,7 +14,7 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
   const [mensagens, setMensagens] = useState([
     {
       id: 1,
-      texto: "Olá! Sou o Alvo, seu consultor financeiro. Vi que temos alguns lançamentos este mês. Como posso te ajudar a poupar dinheiro ou analisar seus dados hoje?",
+      texto: "Olá! Sou o Alvo, seu consultor financeiro. Como posso te ajudar a poupar dinheiro ou analisar seus dados hoje?",
       remetente: 'ia'
     }
   ]);

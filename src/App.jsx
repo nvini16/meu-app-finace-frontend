@@ -17,7 +17,7 @@ function Dashboard() {
   className="w-20 h-20 object-contain drop-shadow-[0_0_16px_rgba(52,211,153,0.3)]"
 />
 
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-10">
           <NavLink 
             to="/lancamentos"
             className={({ isActive }) => 

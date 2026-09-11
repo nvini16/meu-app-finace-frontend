@@ -295,7 +295,7 @@ export default function Lancamentos({ session }) {
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-100 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6 pb-20">
         
         {/* CABEÇALHO COM LOGO CORRIGIDA */}
         <header className="flex justify-between items-center border-b border-slate-800 pb-1 pt-0">
@@ -338,9 +338,7 @@ export default function Lancamentos({ session }) {
               onChange={(e) => setAnoSelecionado(e.target.value)}
               className="bg-slate-950 border border-slate-800 focus:border-emerald-500 text-slate-200 text-sm font-medium rounded-xl p-2.5 outline-none cursor-pointer transition-all"
             >
-              <option value="2025">2025</option>
               <option value="2026">2026</option>
-              <option value="2027">2027</option>
             </select>
           </div>
         </div>
