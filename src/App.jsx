@@ -12,21 +12,28 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <header className="max-w-7xl w-full mx-auto px-4 py-4 flex justify-between items-center border-b border-slate-900">
-        <h1 className="text-xl font-bold text-emerald-400">Alvocapital</h1>
+        <img
+  src="/publicpwa-512x512.png"
+  alt="Alvocapital"
+  className="w-20 h-20 object-contain drop-shadow-[0_0_16px_rgba(52,211,153,0.3)]"
+/>
 
         <nav className="flex items-center gap-2">
-          <button
-            onClick={() => navigate('/lancamentos')}
-            className="text-xs px-3 py-1.5 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800/80 cursor-pointer"
-          >
-            Lançamentos
-          </button>
-          <button
-            onClick={() => navigate('/perfil')}
-            className="text-xs px-3 py-1.5 rounded-lg font-medium bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800/80 cursor-pointer"
-          >
-            Configurações
-          </button>
+          <a href="/lancamentos">
+            <img 
+              src="/lancamentos.png" 
+              alt="Lançamentos" 
+              className="h-10 w-10 "
+              />
+          </a>
+
+          <a href="/perfil">
+            <img 
+              src="/configuracao.png" 
+              alt="Perfil" 
+              className="h-10 w-10 "
+              />
+          </a>
           {/* <button
             onClick={async () => {
               await signOut();
