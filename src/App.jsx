@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes, NavLink } from 'react-router-dom';
 import Login from './components/Login';
 import Lancamentos from './components/Lancamentos';
 import Perfil from './components/Perfil';
@@ -6,8 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
 function Dashboard() {
-  const { session, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { session } = useAuth();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -19,21 +18,33 @@ function Dashboard() {
 />
 
         <nav className="flex items-center gap-2">
-          <a href="/lancamentos">
+          <NavLink 
+            to="/lancamentos"
+            className={({ isActive }) => 
+              isActive 
+                ? 'scale-110 brightness-125 drop-shadow-[0_0_8px_rgba(52,211,153,0.55)] transation-all duration-200' 
+                : 'transation-all duration-200'}
+          >
             <img 
               src="/lancamentos.png" 
               alt="Lançamentos" 
               className="h-10 w-10 "
               />
-          </a>
+          </NavLink>
 
-          <a href="/perfil">
+          <NavLink 
+            to="/perfil"
+            className={({ isActive}) => 
+              isActive 
+                ? 'scale-110 brightness-125 drop-shadow-[0_0_8px_rgba(52,211,153,0.55)] transation-all duration-200' 
+                : 'transation-all duration-200'}  
+          >
             <img 
               src="/configuracao.png" 
               alt="Perfil" 
               className="h-10 w-10 "
               />
-          </a>
+          </NavLink>
           {/* <button
             onClick={async () => {
               await signOut();
