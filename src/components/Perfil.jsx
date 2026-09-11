@@ -51,7 +51,7 @@ export default function Perfil({ session }) {
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
             E-mail Vinculado
           </label>
-          <div className="text-slate-200 bg-slate-950 border border-slate-800/80 rounded-lg px-4 py-3 font-medium break-words">
+          <div className="text-slate-200 bg-slate-950 border border-slate-800/80 rounded-lg px-4 py-3 font-medium overflow-x-auto whitespace-nowrap">
             {session?.user?.email || 'usuario@email.com'}
           </div>
         </div>
@@ -60,7 +60,7 @@ export default function Perfil({ session }) {
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
             ID do Usuário
           </label>
-          <div className="text-slate-400 bg-slate-950 border border-slate-800/80 rounded-lg px-4 py-3 font-medium break-word">
+          <div className="text-slate-400 bg-slate-950 border border-slate-800/80 rounded-lg px-4 py-3 font-medium overflow-x-auto whitespace-nowrap">
             {session?.user?.id || '00000000-0000-0000-0000-000000000000'}
           </div>
         </div>
