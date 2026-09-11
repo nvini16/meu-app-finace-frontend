@@ -1,7 +1,7 @@
 // src/components/Perfil.jsx
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import Modal from './Modal'; // Reutilizando o seu modal personalizado
+import Modal from './Modal'; // Reutilizando o modal personalizado
 
 export default function Perfil({ session }) {
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export default function Perfil({ session }) {
       {/* CABEÇALHO DA TELA */}
       <div>
         <h1 className="text-2xl font-bold text-slate-100">Configurações</h1>
-        <p className="text-sm text-slate-400">Gerencie suas informações e preferências de conta.</p>
+        <p className="text-sm text-slate-400">Gerencie suas informações.</p>
       </div>
 
       {/* SEÇÃO 1: PERFIL DO USUÁRIO */}
@@ -51,7 +51,7 @@ export default function Perfil({ session }) {
           <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
             E-mail Vinculado
           </label>
-          <div className="text-slate-200 bg-slate-950 border border-slate-800/80 rounded-lg px-4 py-3 font-medium">
+          <div className="text-slate-200 bg-slate-950 border border-slate-800/80 rounded-lg px-4 py-3 font-medium break-words">
             {session?.user?.email || 'usuario@email.com'}
           </div>
         </div>
