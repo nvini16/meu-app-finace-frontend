@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 // FUNÇÃO EXTERNA: O React Compiler não valida pureza aqui dentro
 const criarObjetoMensagem = (texto, remetente) => ({
@@ -8,6 +9,7 @@ const criarObjetoMensagem = (texto, remetente) => ({
 });
 
 export default function ChatAlvo({ transacoes, mesSelecionado }) {
+  const { session } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [digitando, setDigitando] = useState(false);
@@ -48,12 +50,17 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
     const novoHistorico = [...mensagens, novaMensagemUsuario];
 
     try {
+      if (!session?.access_token) {
+        throw new Error('Usuário não autenticado.');
+      }
+
       // 2. Chamada real para a Edge Function do Supabase
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/alvo-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           historico: novoHistorico, // Enviando o histórico corrigido
