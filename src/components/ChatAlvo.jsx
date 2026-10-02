@@ -15,7 +15,23 @@ const ehConfirmacaoExplicita = (texto) => {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
-  return /^(sim|sim,|sim!|pode|pode sim|confirmo|confirmado|confirmar|pode excluir|pode editar|pode criar|eu confirmo|eu confirmo e confirmo|confirmo que quero|confirmo que quero excluir|confirmo que quero editar|confirmo que quero criar|pode prosseguir|pode continuar|pode realizar)$/.test(normalizado);
+  const confirmacoes = [
+    /^sim(?:,|!|\.)?$/,
+    /^confirmo(?:,|!|\.)?$/,
+    /^confirmado(?:,|!|\.)?$/,
+    /^pode(?:,|!|\.)?$/,
+    /^pode sim(?:,|!|\.)?$/,
+    /^eu confirmo\\b/,
+    /^confirmo que quero\\b/,
+    /^pode prosseguir\\b/,
+    /^pode continuar\\b/,
+    /^pode realizar\\b/,
+    /^pode excluir\\b/,
+    /^pode editar\\b/,
+    /^pode criar\\b/
+  ];
+
+  return confirmacoes.some((padrao) => padrao.test(normalizado));
 };
 
 export default function ChatAlvo({ transacoes, mesSelecionado }) {
