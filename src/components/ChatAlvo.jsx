@@ -137,19 +137,18 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
       }
 
       // Ação retornada pelo Alvo-Chat fica preparada no frontend.
-      // Um código novo é associado a cada ação e deve ser repetido pelo usuário.
+      // O ID e o código de confirmação são gerados e enviados pelo servidor.
       if (data?.acao) {
-        const codigoConfirmacao = gerarCodigoConfirmacao();
-
         setAcaoPendente({
           ...data.acao,
-          codigoConfirmacao
+          confirmacaoId: data.confirmacao?.id,
+          codigoConfirmacao: data.confirmacao?.codigo
         });
 
         const respostaComConfirmacao = [
           data?.resposta || 'Preparei a operação solicitada.',
           '',
-          'Para confirmar, digite exatamente: ' + codigoConfirmacao
+          'Para confirmar, digite exatamente: ' + data.confirmacao?.codigo
         ].join('\\n');
 
         const respostaIA = criarObjetoMensagem(respostaComConfirmacao, 'ia');
