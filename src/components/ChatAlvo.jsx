@@ -8,31 +8,33 @@ const criarObjetoMensagem = (texto, remetente) => ({
   remetente
 });
 
-const ehConfirmacaoExplicita = (texto) => {
-  const normalizado = texto
+const PALAVRAS_CONFIRMacao = [
+  'cachorro',
+  'balde',
+  'peixe',
+  'abobora verde',
+  'janela',
+  'montanha',
+  'caderno',
+  'girassol',
+  'planeta',
+  'chave',
+  'rio azul',
+  'foguete'
+];
+
+const normalizarCodigoConfirmacao = (texto) =>
+  texto
     .trim()
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
 
-  const confirmacoes = [
-    /^sim(?:,|!|\.)?$/,
-    /^confirmo(?:,|!|\.)?$/,
-    /^confirmado(?:,|!|\.)?$/,
-    /^pode(?:,|!|\.)?$/,
-    /^pode sim(?:,|!|\.)?$/,
-    /^eu confirmo\b/,
-    /^confirmo que quero\b/,
-    /^pode prosseguir\b/,
-    /^pode continuar\b/,
-    /^pode realizar\b/,
-    /^pode excluir\b/,
-    /^pode editar\b/,
-    /^pode criar\b/
+const gerarCodigoConfirmacao = () =>
+  PALAVRAS_CONFIRMacao[
+    Math.floor(Math.random() * PALAVRAS_CONFIRMacao.length)
   ];
-
-  return confirmacoes.some((padrao) => padrao.test(normalizado));
-};
 
 export default function ChatAlvo({ transacoes, mesSelecionado }) {
   const { session } = useAuth();
@@ -105,9 +107,13 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
         throw new Error('Usuário não autenticado.');
       }
 
-      // Se existe uma operação preparada, somente uma confirmação explícita
-      // pode levá-la para a função de execução.
-      if (acaoPendente && ehConfirmacaoExplicita(textoMensagem)) {
+      // A operação preparada só pode ser executada quando o usuário
+      // repetir exatamente o código de confirmação gerado para ela.
+      if (
+        acaoPendente &&
+        normalizarCodigoConfirmacao(textoMensagem) ===
+          normalizarCodigoConfirmacao(acaoPendente.codigoConfirmacao)
+      ) {
         const acaoExecutada = await executarAcaoPendente(acaoPendente);
 
         setAcaoPendente(null);
@@ -152,16 +158,33 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
         throw new Error(data?.erro || 'Erro na resposta do Alvo.');
       }
 
-      // Ação retornada pelo Alvo-Chat fica apenas preparada no frontend.
-      // A execução só acontece no próximo turno, após confirmação explícita.
+      // Ação retornada pelo Alvo-Chat fica preparada no frontend.
+      // Um código novo é associado a cada ação e deve ser repetido pelo usuário.
       if (data?.acao) {
-        setAcaoPendente(data.acao);
+        const codigoConfirmacao = gerarCodigoConfirmacao();
+
+        setAcaoPendente({
+          ...data.acao,
+          codigoConfirmacao
+        });
+
+        const respostaComConfirmacao = [
+          data?.resposta || 'Preparei a operação solicitada.',
+          '',
+          'Para confirmar, digite exatamente: ' + codigoConfirmacao
+        ].join('\\n');
+
+        const respostaIA = criarObjetoMensagem(respostaComConfirmacao, 'ia');
+        setMensagens(prev => [...prev, respostaIA]);
       } else {
         setAcaoPendente(null);
-      }
 
-      const respostaIA = criarObjetoMensagem(data?.resposta || 'Não consegui processar sua solicitação.', 'ia');
-      setMensagens(prev => [...prev, respostaIA]);
+        const respostaIA = criarObjetoMensagem(
+          data?.resposta || 'Não consegui processar sua solicitação.',
+          'ia'
+        );
+        setMensagens(prev => [...prev, respostaIA]);
+      }
 
     } catch (error) {
       console.error("Erro ao conversar com o Alvo:", error);
