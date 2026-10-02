@@ -21,14 +21,14 @@ const ehConfirmacaoExplicita = (texto) => {
     /^confirmado(?:,|!|\.)?$/,
     /^pode(?:,|!|\.)?$/,
     /^pode sim(?:,|!|\.)?$/,
-    /^eu confirmo\\b/,
-    /^confirmo que quero\\b/,
-    /^pode prosseguir\\b/,
-    /^pode continuar\\b/,
-    /^pode realizar\\b/,
-    /^pode excluir\\b/,
-    /^pode editar\\b/,
-    /^pode criar\\b/
+    /^eu confirmo\b/,
+    /^confirmo que quero\b/,
+    /^pode prosseguir\b/,
+    /^pode continuar\b/,
+    /^pode realizar\b/,
+    /^pode excluir\b/,
+    /^pode editar\b/,
+    /^pode criar\b/
   ];
 
   return confirmacoes.some((padrao) => padrao.test(normalizado));
