@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { historico, transacoes } = await req.json()
+    const { historico } = await req.json()
     
     const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
@@ -41,6 +41,25 @@ serve(async (req) => {
         }
       }
     }
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'Usuário não autenticado.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // BUSCAR DADOS FINANCEIROS DIRETAMENTE DO BANCO
+    const { data: transacoesDoBanco, error: erroTransacoes } = await supabase
+      .from('transacoes')
+      .select('*')
+      .eq('user_id', userId)
+
+    if (erroTransacoes) {
+      throw new Error('Não foi possível carregar os dados financeiros do usuário.')
+    }
+
+    const transacoes = transacoesDoBanco || []
 
     // 1. BUSCAR MEMÓRIAS DE LONGO PRAZO
     let memoriasFormatadas = 'Nenhum fato memorizado ainda. Este é o início da sua relação com o usuário.'
