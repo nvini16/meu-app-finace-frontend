@@ -8,21 +8,6 @@ const criarObjetoMensagem = (texto, remetente) => ({
   remetente
 });
 
-const PALAVRAS_CONFIRMacao = [
-  'cachorro',
-  'balde',
-  'peixe',
-  'abobora verde',
-  'janela',
-  'montanha',
-  'caderno',
-  'girassol',
-  'planeta',
-  'chave',
-  'rio azul',
-  'foguete'
-];
-
 const normalizarCodigoConfirmacao = (texto) =>
   texto
     .trim()
@@ -30,11 +15,6 @@ const normalizarCodigoConfirmacao = (texto) =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ');
-
-const gerarCodigoConfirmacao = () =>
-  PALAVRAS_CONFIRMacao[
-    Math.floor(Math.random() * PALAVRAS_CONFIRMacao.length)
-  ];
 
 export default function ChatAlvo({ transacoes, mesSelecionado }) {
   const { session } = useAuth();
@@ -77,10 +57,8 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          operacao: acao.operacao,
-          id: acao.id ?? null,
-          dados: acao.dados ?? null,
-          confirmacao: true
+          confirmacaoId: acao.confirmacaoId,
+          codigo: acao.codigoConfirmacao
         })
       }
     );
