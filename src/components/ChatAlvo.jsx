@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
 
 // FUNÇÃO EXTERNA: O React Compiler não valida pureza aqui dentro
 const criarObjetoMensagem = (texto, remetente) => ({
@@ -8,20 +7,10 @@ const criarObjetoMensagem = (texto, remetente) => ({
   remetente
 });
 
-const normalizarCodigoConfirmacao = (texto) =>
-  texto
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ');
-
 export default function ChatAlvo({ transacoes, mesSelecionado }) {
-  const { session } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [digitando, setDigitando] = useState(false);
-  const [acaoPendente, setAcaoPendente] = useState(null);
   const [mensagens, setMensagens] = useState([
     {
       id: 1,
@@ -32,142 +21,59 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
 
   const chatEndRef = useRef(null);
 
+  // Rolagem automática para a última mensagem
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensagens, digitando]);
 
+  // Perguntas de atalho dinâmicas baseadas no histórico do mês
   const chipsSugestoes = [
     `Resumo do mês ${mesSelecionado}`,
     "Onde posso economizar?",
     "Qual meu saldo atual?",
   ];
 
-  const executarAcaoPendente = async (acao) => {
-    if (!session?.access_token) {
-      throw new Error('Usuário não autenticado.');
-    }
-
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/alvo-transacoes`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          confirmacaoId: acao.confirmacaoId,
-          codigo: acao.codigoConfirmacao
-        })
-      }
-    );
-
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      throw new Error(data?.erro || 'Não foi possível executar a operação.');
-    }
-
-    return data;
-  };
-
   const handleEnviarMensagem = async (textoMensagem) => {
-    if (!textoMensagem.trim() || digitando) return;
+    if (!textoMensagem.trim()) return;
 
+    // 1. Cria a mensagem do usuário
     const novaMensagemUsuario = criarObjetoMensagem(textoMensagem, 'user');
+    
+    // Atualiza a tela para o usuário ver o que digitou
     setMensagens(prev => [...prev, novaMensagemUsuario]);
     setInput('');
     setDigitando(true);
 
+    // CORREÇÃO 1: Cria o histórico atualizado na hora para a IA receber a pergunta atual
+    const novoHistorico = [...mensagens, novaMensagemUsuario];
+
     try {
-      if (!session?.access_token) {
-        throw new Error('Usuário não autenticado.');
-      }
+      // 2. Chamada real para a Edge Function do Supabase
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/alvo-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          historico: novoHistorico, // Enviando o histórico corrigido
+          transacoes: transacoes
+        })
+      });
 
-      // A operação preparada só pode ser executada quando o usuário
-      // repetir exatamente o código de confirmação gerado para ela.
-      if (
-        acaoPendente &&
-        normalizarCodigoConfirmacao(textoMensagem) ===
-          normalizarCodigoConfirmacao(acaoPendente.codigoConfirmacao)
-      ) {
-        const acaoExecutada = await executarAcaoPendente(acaoPendente);
+      if (!response.ok) throw new Error('Erro na resposta do Alvo');
 
-        setAcaoPendente(null);
-
-        const respostaExecucao = criarObjetoMensagem(
-          acaoExecutada?.mensagem ||
-          `Operação "${acaoPendente.operacao}" executada com sucesso.`,
-          'ia'
-        );
-
-        setMensagens(prev => [...prev, respostaExecucao]);
-        return;
-      }
-
-      // Uma nova solicitação enquanto existe uma confirmação pendente
-      // não reutiliza a confirmação anterior.
-      if (acaoPendente) {
-        setAcaoPendente(null);
-      }
-
-      const novoHistorico = [...mensagens, novaMensagemUsuario];
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/alvo-chat`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${session.access_token}`
-          },
-          body: JSON.stringify({
-            historico: novoHistorico,
-            transacoes: transacoes
-          })
-        }
-      );
-
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(data?.erro || 'Erro na resposta do Alvo.');
-      }
-
-      // Ação retornada pelo Alvo-Chat fica preparada no frontend.
-      // O ID e o código de confirmação são gerados e enviados pelo servidor.
-      if (data?.acao) {
-        setAcaoPendente({
-          ...data.acao,
-          confirmacaoId: data.confirmacao?.id,
-          codigoConfirmacao: data.confirmacao?.codigo
-        });
-
-        const respostaComConfirmacao = [
-          data?.resposta || 'Preparei a operação solicitada.',
-          '',
-          'Para confirmar, digite exatamente: ' + data.confirmacao?.codigo
-        ].join('\\n');
-
-        const respostaIA = criarObjetoMensagem(respostaComConfirmacao, 'ia');
-        setMensagens(prev => [...prev, respostaIA]);
-      } else {
-        setAcaoPendente(null);
-
-        const respostaIA = criarObjetoMensagem(
-          data?.resposta || 'Não consegui processar sua solicitação.',
-          'ia'
-        );
-        setMensagens(prev => [...prev, respostaIA]);
-      }
+      const data = await response.json();
+      
+      // 3. Adiciona a resposta real da IA na tela
+      const respostaIA = criarObjetoMensagem(data.resposta, 'ia');
+      setMensagens(prev => [...prev, respostaIA]);
 
     } catch (error) {
       console.error("Erro ao conversar com o Alvo:", error);
-
+      
       const erroMensagem = criarObjetoMensagem(
-        error.message || "Desculpe, tive um problema para conectar com meu servidor. Pode tentar de novo?",
+        "Desculpe, tive um problema para conectar com meu servidor. Pode tentar de novo?", 
         "ia"
       );
       setMensagens(prev => [...prev, erroMensagem]);
@@ -187,6 +93,7 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
           <div className="bg-slate-950 p-4 border-b border-slate-800 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="relative">
+                {/* Container do Avatar adaptado para o personagem */}
                 <div className="w-10 h-10 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center overflow-hidden">
                   <img 
                     src="/Design_sem_nome-removebg-preview.png" 
@@ -194,6 +101,7 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
                     className="w-full h-full object-contain p-0.28"
                   />
                 </div>
+                {/* Indicador Online */}
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-950 rounded-full"></span>
               </div>
               <div>
@@ -202,6 +110,7 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
               </div>
             </div>
             
+            {/* Botão de Fechar reposicionado corretamente dentro do Topo */}
             <button 
               onClick={() => setIsOpen(false)}
               className="text-slate-400 hover:text-slate-200 transition-colors p-1 cursor-pointer text-sm"
@@ -227,6 +136,7 @@ export default function ChatAlvo({ transacoes, mesSelecionado }) {
               </div>
             ))}
 
+            {/* EFEITO DIGITANDO... */}
             {digitando && (
               <div className="flex justify-start">
                 <div className="bg-slate-950 border border-slate-800 rounded-2xl rounded-tl-none px-4 py-3 shadow-md flex items-center gap-1">
